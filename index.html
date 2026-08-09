@@ -28,10 +28,12 @@
         
         .loader { display: none; text-align: center; margin-top: 10px; font-style: italic; color: #666; font-size: 14px; }
         
+        /* Étape 2 cachée par défaut */
         #step-2 { display: none; }
-        .btn-retour { cursor: pointer; color: #666; font-size: 14px; margin-bottom: 15px; display: inline-block; }
+        .btn-retour { cursor: pointer; color: #666; font-size: 14px; margin-bottom: 15px; display: inline-block; font-weight: bold; }
         .btn-retour:hover { color: #333; }
         
+        /* Boîte récapitulative */
         .recap-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-top: 25px; }
         .recap-box h4 { margin: 0 0 15px 0; color: #1a2b4c; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .recap-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #555; }
@@ -101,7 +103,6 @@
         <div class="row">
             <div class="form-group">
                 <label>Date</label>
-                <!-- ATTENTION : min="" est mis à jour dynamiquement au chargement -->
                 <input type="date" id="date">
             </div>
             <div class="form-group">
@@ -132,18 +133,24 @@
         <h3>Vos coordonnées</h3>
 
         <div class="form-group">
-            <label>Nom Complet <span>*</span></label>
+            <label>Nom et Prénom <span>*</span></label>
             <input type="text" id="client_nom" placeholder="Jean Dupont">
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Date de naissance <span>*</span></label>
+                <input type="date" id="client_naissance">
+            </div>
+            <div class="form-group">
+                <label>Téléphone <span>*</span></label>
+                <input type="tel" id="client_tel" placeholder="06 12 34 56 78">
+            </div>
         </div>
 
         <div class="form-group">
             <label>Email <span>*</span></label>
             <input type="email" id="client_email" placeholder="jean.dupont@email.com">
-        </div>
-
-        <div class="form-group">
-            <label>Téléphone <span>*</span></label>
-            <input type="tel" id="client_tel" placeholder="06 12 34 56 78">
         </div>
 
         <div class="form-group">
@@ -217,7 +224,7 @@
         'famille': { 1:180, 2:360, 3:510, 4:680, 5:850, 6:960, 7:1120, 8:1200, 9:1300, 10:1400, 11:1500, 12:1900 }
     };
 
-    // Injection automatique et stricte de la date minimale du jour au chargement
+    // Bloquer strictement les dates antérieures à aujourd'hui (Fuseau local)
     document.addEventListener("DOMContentLoaded", function() {
         const dateActuelle = new Date();
         const annee = dateActuelle.getFullYear();
@@ -227,7 +234,7 @@
         const dateLocal = `${annee}-${mois}-${jour}`;
         const inputDate = document.getElementById("date");
         inputDate.setAttribute("min", dateLocal);
-        inputDate.value = dateLocal; // Pré-remplit par défaut sur aujourd'hui pour plus de confort
+        inputDate.value = dateLocal;
     });
 
     function setMode(m) {
@@ -289,7 +296,7 @@
         } catch (error) { throw new Error("Impossible de localiser l'adresse."); }
     }
 
-    // Vérification stricte : minimum 6 heures à l'avance
+    // Règle stricte : 6 heures minimum à l'avance
     function verifierDelaiReservation() {
         const dateInput = document.getElementById('date').value;
         const heureInput = document.getElementById('heure').value;
@@ -310,7 +317,7 @@
         return true;
     }
 
-    // Bouton "Réserver"
+    // Action du bouton "Réserver"
     async function reserver() {
         if (!verifierDelaiReservation()) return;
 
@@ -394,7 +401,7 @@
     }
 
     function procederPaiement() {
-        const requiredFields = ['client_nom', 'client_email', 'client_tel', 'client_rue', 'client_cp', 'client_ville', 'client_pays'];
+        const requiredFields = ['client_nom', 'client_naissance', 'client_email', 'client_tel', 'client_rue', 'client_cp', 'client_ville', 'client_pays'];
         let isValid = true;
         
         requiredFields.forEach(id => {
