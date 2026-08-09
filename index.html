@@ -99,22 +99,33 @@
         document.getElementById('field-duree').style.display = (m === 'mise') ? 'block' : 'none';
     }
 
-    // Fonction d'autocomplétion gratuite via Nominatim (France)
+    // Autocomplétion France + Belgique, filtrée sans les quartiers
     async function autocompleter(inputId, listId) {
         const query = document.getElementById(inputId).value;
-        if (query.length < 3) return; // Lance la recherche à partir de 3 caractères
+        if (query.length < 3) return;
 
         try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=fr&limit=5`);
+            // Paramètre addressdetails=1 pour récupérer séparément le numéro, la rue, le cp et la ville
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=fr,be&addressdetails=1&limit=5`);
             const data = await response.json();
             
             const datalist = document.getElementById(listId);
-            datalist.innerHTML = ''; // Vide les anciennes propositions
+            datalist.innerHTML = '';
 
             data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.display_name;
-                datalist.appendChild(option);
+                const addr = item.address || {};
+                const numero = addr.house_number ? addr.house_number + ' ' : '';
+                const rue = addr.road || addr.pedestrian || addr.residential || '';
+                const cp = addr.postcode ? addr.postcode : '';
+                const ville = addr.city || addr.town || addr.village || addr.municipality || '';
+
+                // Construction propre : Numéro, Rue, Code Postal, Ville
+                if (rue && cp && ville) {
+                    const cleanAddress = `${numero}${rue}, ${cp} ${ville}`.trim();
+                    const option = document.createElement('option');
+                    option.value = cleanAddress;
+                    datalist.appendChild(option);
+                }
             });
         } catch (error) {
             console.error("Erreur d'autocomplétion", error);
