@@ -28,12 +28,10 @@
         
         .loader { display: none; text-align: center; margin-top: 10px; font-style: italic; color: #666; font-size: 14px; }
         
-        /* Étape 2 cachée par défaut */
         #step-2 { display: none; }
         .btn-retour { cursor: pointer; color: #666; font-size: 14px; margin-bottom: 15px; display: inline-block; font-weight: bold; }
         .btn-retour:hover { color: #333; }
         
-        /* Boîte récapitulative */
         .recap-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-top: 25px; }
         .recap-box h4 { margin: 0 0 15px 0; color: #1a2b4c; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .recap-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #555; }
@@ -53,7 +51,7 @@
 
 <div class="app-container">
 
-    <!-- ================= ÉTAPE 1 : CHOIX DU TRAJET ================= -->
+    <!-- ÉTAPE 1 : CHOIX DU TRAJET -->
     <div id="step-1">
         <h2>Où allez-vous ?</h2>
 
@@ -127,7 +125,7 @@
     </div>
 
 
-    <!-- ================= ÉTAPE 2 : COORDONNÉES CLIENT & PAIEMENT ================= -->
+    <!-- ÉTAPE 2 : COORDONNÉES CLIENT & RÉCAP -->
     <div id="step-2">
         <div class="btn-retour" onclick="retourStep1()">← Retour</div>
         <h3>Vos coordonnées</h3>
@@ -196,12 +194,12 @@
             </div>
 
             <div class="promo-box">
-                <input type="text" placeholder="CODE PROMO">
+                <input type="text" placeholder="CODE PROMO" id="promo-code">
                 <button type="button">Appliquer</button>
             </div>
 
             <div class="total-box">
-                <div class="titre">Total</div>
+                <div class="titre">Total estimé</div>
                 <div class="prix"><span id="recap-prix">0.00</span> €</div>
                 <div class="tva">Dont TVA (0%): 0.00 €</div>
             </div>
@@ -213,19 +211,16 @@
 </div>
 
 <script>
-    // Adresse de base mise à jour
     const ADRESSE_BASE = "198, résidence des bleuets 59299 Boechepe";
     let mode = 'simple';
     let timeoutId = null;
-    let montantFinal = 0;
-    let distanceFinaleKm = 0;
+    let montantIndicatif = 0; // Usage purement indicatif pour l'affichage front
 
     const tarifsMiseADispo = {
         'confort': { 1:90, 2:180, 3:255, 4:340, 5:425, 6:480, 7:560, 8:600, 9:675, 10:700, 11:770, 12:960 },
         'famille': { 1:180, 2:360, 3:510, 4:680, 5:850, 6:960, 7:1120, 8:1200, 9:1300, 10:1400, 11:1500, 12:1900 }
     };
 
-    // Bloquer strictement les dates antérieures à aujourd'hui au chargement
     document.addEventListener("DOMContentLoaded", function() {
         const dateActuelle = new Date();
         const annee = dateActuelle.getFullYear();
@@ -297,7 +292,6 @@
         } catch (error) { throw new Error("Impossible de localiser l'adresse."); }
     }
 
-    // Règle des 6 heures minimum
     function verifierDelaiReservation() {
         const dateInput = document.getElementById('date').value;
         const heureInput = document.getElementById('heure').value;
@@ -318,7 +312,6 @@
         return true;
     }
 
-    // Clic sur "Réserver" (Calcul et passage direct à l'étape 2)
     async function reserver() {
         if (!verifierDelaiReservation()) return;
 
@@ -331,9 +324,9 @@
 
         if (mode === 'mise') {
             const duree = parseInt(document.getElementById('duree').value);
-            montantFinal = tarifsMiseADispo[gamme][duree];
+            montantIndicatif = tarifsMiseADispo[gamme][duree];
             
-            remplirRecap(gamme, dateTimeAffiche, `Mise à disposition (${duree}h)`, montantFinal);
+            remplirRecap(gamme, dateTimeAffiche, `Mise à disposition (${duree}h)`, montantIndicatif);
             passerEtape2();
             return;
         }
@@ -366,20 +359,15 @@
             let tarifTrajet   = (gamme === 'confort') ? 0.98 : 1.00;
             let tarifRetour   = (gamme === 'confort') ? 0.45 : 0.60;
 
-            montantFinal = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
-            distanceFinaleKm = distTrajet;
+            montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
 
             loader.style.display = 'none';
-            remplirRecap(gamme, dateTimeAffiche, `${distanceFinaleKm.toFixed(1)} km`, montantFinal);
+            remplirRecap(gamme, dateTimeAffiche, `${distTrajet.toFixed(1)} km`, montantIndicatif);
             passerEtape2();
 
         } catch (error) {
             loader.style.display = 'none';
-            if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-                alert("Le calcul a été bloqué par votre navigateur. Désactivez votre bloqueur de publicité.");
-            } else {
-                alert(error.message);
-            }
+            alert(error.message);
         }
     }
 
@@ -401,7 +389,7 @@
         document.getElementById('step-1').style.display = 'block';
     }
 
-    // Clic final sur "Procéder au paiement" (Après saisie des coordonnées)
+    // Bouton de paiement sécurisé (envoi des données brutes au backend)
     async function procederPaiement() {
         const nom = document.getElementById('client_nom').value.trim();
         const naissance = document.getElementById('client_naissance').value;
@@ -418,20 +406,21 @@
             return;
         }
 
+        // On transmet les adresses et paramètres bruts, JAMAIS le prix final calculé front
         const reservationData = {
             mode: mode,
             gamme: document.getElementById('gamme').value,
-            depart: mode === 'simple' ? document.getElementById('depart').value : "Base (Mise à disposition)",
-            arrivee: mode === 'simple' ? document.getElementById('arrivee').value : `Mise à dispo (${document.getElementById('duree').value}h)`,
+            adresseDepart: mode === 'simple' ? document.getElementById('depart').value : null,
+            adresseArrivee: mode === 'simple' ? document.getElementById('arrivee').value : null,
+            dureeMiseADispo: mode === 'mise' ? document.getElementById('duree').value : null,
             date: document.getElementById('date').value,
             heure: document.getElementById('heure').value,
             passagers: document.getElementById('passagers').value,
             bagages: document.getElementById('bagages').value,
-            montantTotal: montantFinal.toFixed(2),
             client: {
-                nom: nom,
+                nom,
                 dateNaissance: naissance,
-                email: email,
+                email,
                 telephone: tel,
                 informations: infos,
                 adresse: `${rue}, ${cp} ${ville}, ${pays}`
@@ -443,6 +432,7 @@
         btnPaiement.innerText = "Création du paiement...";
 
         try {
+            // Point d'entrée vers ton backend (Webhook Make ou Cloudflare Pages Function)
             const webhookUrl = "https://hook.eu1.make.com/TON_WEBHOOK_MAKE";
 
             const reponse = await fetch(webhookUrl, {
@@ -451,19 +441,20 @@
                 body: JSON.stringify(reservationData)
             });
 
-            if (!reponse.ok) throw new Error("Erreur de communication avec le serveur.");
+            if (!reponse.ok) throw new Error("Le service de paiement est momentanément injoignable.");
 
             const resultat = await reponse.json();
 
             if (resultat.urlStripe) {
                 window.location.href = resultat.urlStripe;
             } else {
-                alert("Réservation enregistrée avec succès !");
+                throw new Error("Réponse invalide du serveur de paiement.");
             }
 
         } catch (error) {
             console.error(error);
-            alert("Coordonnées validées avec succès ! Montant total de la course : " + montantFinal.toFixed(2) + " €.");
+            // Erreur corrigée : message clair d'échec sans faux positif de succès
+            alert("Échec de l'initialisation du paiement : " + error.message + "\nVeuillez réessayer.");
             btnPaiement.disabled = false;
             btnPaiement.innerText = "Procéder au paiement";
         }
