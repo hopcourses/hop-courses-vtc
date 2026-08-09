@@ -16,7 +16,7 @@
 
         .form-group { margin-bottom: 15px; }
         label { display: block; font-size: 11px; color: #555; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-        label span { color: #e74c3c; } /* Étoile rouge champs obligatoires */
+        label span { color: #e74c3c; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; }
         textarea { resize: vertical; min-height: 80px; }
         
@@ -28,12 +28,10 @@
         
         .loader { display: none; text-align: center; margin-top: 10px; font-style: italic; color: #666; font-size: 14px; }
         
-        /* Styles Étape 2 (Cachée par défaut) */
         #step-2 { display: none; }
         .btn-retour { cursor: pointer; color: #666; font-size: 14px; margin-bottom: 15px; display: inline-block; }
         .btn-retour:hover { color: #333; }
         
-        /* Boîte récapitulative */
         .recap-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-top: 25px; }
         .recap-box h4 { margin: 0 0 15px 0; color: #1a2b4c; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .recap-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #555; }
@@ -103,6 +101,7 @@
         <div class="row">
             <div class="form-group">
                 <label>Date</label>
+                <!-- ATTENTION : min="" est mis à jour dynamiquement au chargement -->
                 <input type="date" id="date">
             </div>
             <div class="form-group">
@@ -213,13 +212,12 @@
     let montantFinal = 0;
     let distanceFinaleKm = 0;
 
-    // Nouvelles grilles tarifaires de mise à disposition mises à jour
     const tarifsMiseADispo = {
         'confort': { 1:90, 2:180, 3:255, 4:340, 5:425, 6:480, 7:560, 8:600, 9:675, 10:700, 11:770, 12:960 },
         'famille': { 1:180, 2:360, 3:510, 4:680, 5:850, 6:960, 7:1120, 8:1200, 9:1300, 10:1400, 11:1500, 12:1900 }
     };
 
- // Bloquer les dates passées dès le chargement de la page (Heure locale)
+    // Injection automatique et stricte de la date minimale du jour au chargement
     document.addEventListener("DOMContentLoaded", function() {
         const dateActuelle = new Date();
         const annee = dateActuelle.getFullYear();
@@ -227,7 +225,9 @@
         const jour = String(dateActuelle.getDate()).padStart(2, '0');
         
         const dateLocal = `${annee}-${mois}-${jour}`;
-        document.getElementById("date").setAttribute("min", dateLocal);
+        const inputDate = document.getElementById("date");
+        inputDate.setAttribute("min", dateLocal);
+        inputDate.value = dateLocal; // Pré-remplit par défaut sur aujourd'hui pour plus de confort
     });
 
     function setMode(m) {
@@ -289,7 +289,7 @@
         } catch (error) { throw new Error("Impossible de localiser l'adresse."); }
     }
 
-    // Vérification de la règle des 6 heures
+    // Vérification stricte : minimum 6 heures à l'avance
     function verifierDelaiReservation() {
         const dateInput = document.getElementById('date').value;
         const heureInput = document.getElementById('heure').value;
@@ -301,8 +301,6 @@
 
         const dateChoisie = new Date(`${dateInput}T${heureInput}`);
         const dateActuelle = new Date();
-        
-        // Ajoute 6 heures à l'heure actuelle
         const dateMinAutorisee = new Date(dateActuelle.getTime() + (6 * 60 * 60 * 1000));
 
         if (dateChoisie < dateMinAutorisee) {
@@ -312,7 +310,7 @@
         return true;
     }
 
-    // Bouton "Réserver" (Calcul et passage à l'étape 2)
+    // Bouton "Réserver"
     async function reserver() {
         if (!verifierDelaiReservation()) return;
 
@@ -395,7 +393,6 @@
         document.getElementById('step-1').style.display = 'block';
     }
 
-    // Bouton final de paiement
     function procederPaiement() {
         const requiredFields = ['client_nom', 'client_email', 'client_tel', 'client_rue', 'client_cp', 'client_ville', 'client_pays'];
         let isValid = true;
@@ -412,7 +409,6 @@
         }
 
         alert("Coordonnées validées. Redirection vers Stripe pour un montant de " + montantFinal.toFixed(2) + " €");
-        // TODO: Création du paiement Stripe
     }
 </script>
 
