@@ -12,6 +12,8 @@
         input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 12px; background-color: #f39c12; color: white; border: none; cursor: pointer; width: 100%; font-size: 16px; border-radius: 4px; font-weight: bold; }
         button:hover { background-color: #e67e22; }
+        #btn-payer { background-color: #27ae60; margin-top: 15px; display: none; }
+        #btn-payer:hover { background-color: #219653; }
         #resultat { margin-top: 20px; padding: 15px; background-color: #e8f8f5; border: 1px solid #a3e4d7; border-radius: 5px; display: none; }
     </style>
 </head>
@@ -38,17 +40,20 @@
             <input type="text" id="arrivee" placeholder="Ex: Grand Place, Lille">
         </div>
 
-        <button onclick="calculerCourse()">Voir l'estimation et réserver</button>
+        <button onclick="calculerCourse()">Voir l'estimation</button>
 
         <div id="resultat">
             <p><strong>Distance du trajet :</strong> <span id="distTrajet">-</span> km</p>
             <p><strong>Prix estimé :</strong> <span id="prixTotal">-</span> €</p>
+            
+            <!-- Bouton de paiement qui apparaît après le calcul -->
+            <button id="btn-payer" onclick="procederAuPaiement()">Payer la course</button>
         </div>
     </div>
 
     <script>
-        // ADRESSE DE LA BASE (Fixe et cachée au client)
-        const ADRESSE_BASE = "198, résidence les bleuets 59299 Boeschepe"; 
+        const ADRESSE_BASE = "Place de la Gare, Bailleul"; 
+        let dernierPrixCalculé = 0;
 
         async function getCoordinates(adresse) {
             const reponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`);
@@ -64,6 +69,7 @@
             const arriveeTxt = document.getElementById('arrivee').value;
             const gamme = document.getElementById('gamme').value;
             const divResultat = document.getElementById('resultat');
+            const btnPayer = document.getElementById('btn-payer');
 
             if (!departTxt || !arriveeTxt) {
                 alert("Veuillez renseigner les adresses de départ et d'arrivée.");
@@ -71,13 +77,10 @@
             }
 
             try {
-                // 1. Géocodage des 3 points : Base, Départ, Arrivée
                 const coordsBase = await getCoordinates(ADRESSE_BASE);
                 const coordsDepart = await getCoordinates(departTxt);
                 const coordsArrivee = await getCoordinates(arriveeTxt);
 
-                // 2. Requête OSRM en circuit fermé : Base -> Départ -> Arrivée -> Base
-                // Cela génère 3 segments (legs) : Approche, Trajet, Retour
                 const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
                 
                 const reponseRoute = await fetch(urlOSRM);
@@ -86,11 +89,10 @@
                 if (dataRoute.code !== 'Ok') throw new Error("Erreur lors du calcul de l'itinéraire.");
 
                 const legs = dataRoute.routes[0].legs;
-                const distApproche = legs[0].distance / 1000; // Base -> Départ
-                const distTrajet = legs[1].distance / 1000;   // Départ -> Arrivée
-                const distRetour = legs[2].distance / 1000;   // Arrivée -> Base
+                const distApproche = legs[0].distance / 1000;
+                const distTrajet = legs[1].distance / 1000;
+                const distRetour = legs[2].distance / 1000;
 
-                // 3. Application de la grille tarifaire selon la gamme
                 let priseEnCharge = 0;
                 let tarifApproche = 0;
                 let tarifTrajet = 0;
@@ -101,23 +103,35 @@
                     tarifApproche = 0.45;
                     tarifTrajet = 0.98;
                     tarifRetour = 0.45;
-                } else { // famille
+                } else {
                     priseEnCharge = 10;
                     tarifApproche = 0.60;
                     tarifTrajet = 1.00;
                     tarifRetour = 0.60;
                 }
 
-                const prixTotal = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+                dernierPrixCalculé = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
 
-                // 4. Affichage des résultats
                 document.getElementById('distTrajet').innerText = distTrajet.toFixed(2);
-                document.getElementById('prixTotal').innerText = prixTotal.toFixed(2);
+                document.getElementById('prixTotal').innerText = dernierPrixCalculé.toFixed(2);
+                
                 divResultat.style.display = 'block';
+                btnPayer.style.display = 'block';
 
             } catch (error) {
                 alert(error.message);
             }
+        }
+
+        function procederAuPaiement() {
+            if (dernierPrixCalculé <= 0) return;
+
+            // Option : Rediriger vers un webhook Make.com ou un lien de paiement Stripe pré-configuré
+            // Exemple : envoyer les données vers un scénario Make qui génère la session Stripe avec le montant exact
+            alert("Montant à régler : " + dernierPrixCalculé.toFixed(2) + " €. Redirection vers le paiement sécurisé...");
+            
+            // TODO: Remplacer par l'URL de ton Webhook Make ou Stripe Checkout
+            // window.location.href = "https://hook.eu1.make.com/ton-lien-webhook?montant=" + dernierPrixCalculé.toFixed(2);
         }
     </script>
 </body>
