@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réservation VTC - Hop Courses</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; background-color: #f9f9f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 12px; background-color: #f39c12; color: white; border: none; cursor: pointer; width: 100%; font-size: 16px; border-radius: 4px; font-weight: bold; }
+        button:hover { background-color: #e67e22; }
+        #resultat { margin-top: 20px; padding: 15px; background-color: #e8f8f5; border: 1px solid #a3e4d7; border-radius: 5px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Réserver un Transport</h2>
+
+        <div class="form-group">
+            <label>Gamme de véhicule :</label>
+            <select id="gamme">
+                <option value="confort">Confort (Max 4 passagers)</option>
+                <option value="famille">Famille (Max 6 passagers)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Adresse de départ (Point de retrait) :</label>
+            <input type="text" id="depart" placeholder="Ex: 10 Rue de la Gare, Bailleul">
+        </div>
+
+        <div class="form-group">
+            <label>Adresse d'arrivée (Destination) :</label>
+            <input type="text" id="arrivee" placeholder="Ex: Grand Place, Lille">
+        </div>
+
+        <button onclick="calculerCourse()">Voir l'estimation et réserver</button>
+
+        <div id="resultat">
+            <p><strong>Distance du trajet :</strong> <span id="distTrajet">-</span> km</p>
+            <p><strong>Prix estimé :</strong> <span id="prixTotal">-</span> €</p>
+        </div>
+    </div>
+
+    <script>
+        // ADRESSE DE LA BASE (Fixe et cachée au client)
+        const ADRESSE_BASE = "198, résidence les bleuets 59299 Boeschepe"; 
+
+        async function getCoordinates(adresse) {
+            const reponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`);
+            const data = await reponse.json();
+            if (data.length > 0) {
+                return { lat: data[0].lat, lon: data[0].lon };
+            }
+            throw new Error("Adresse introuvable : " + adresse);
+        }
+
+        async function calculerCourse() {
+            const departTxt = document.getElementById('depart').value;
+            const arriveeTxt = document.getElementById('arrivee').value;
+            const gamme = document.getElementById('gamme').value;
+            const divResultat = document.getElementById('resultat');
+
+            if (!departTxt || !arriveeTxt) {
+                alert("Veuillez renseigner les adresses de départ et d'arrivée.");
+                return;
+            }
+
+            try {
+                // 1. Géocodage des 3 points : Base, Départ, Arrivée
+                const coordsBase = await getCoordinates(ADRESSE_BASE);
+                const coordsDepart = await getCoordinates(departTxt);
+                const coordsArrivee = await getCoordinates(arriveeTxt);
+
+                // 2. Requête OSRM en circuit fermé : Base -> Départ -> Arrivée -> Base
+                // Cela génère 3 segments (legs) : Approche, Trajet, Retour
+                const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+                
+                const reponseRoute = await fetch(urlOSRM);
+                const dataRoute = await reponseRoute.json();
+
+                if (dataRoute.code !== 'Ok') throw new Error("Erreur lors du calcul de l'itinéraire.");
+
+                const legs = dataRoute.routes[0].legs;
+                const distApproche = legs[0].distance / 1000; // Base -> Départ
+                const distTrajet = legs[1].distance / 1000;   // Départ -> Arrivée
+                const distRetour = legs[2].distance / 1000;   // Arrivée -> Base
+
+                // 3. Application de la grille tarifaire selon la gamme
+                let priseEnCharge = 0;
+                let tarifApproche = 0;
+                let tarifTrajet = 0;
+                let tarifRetour = 0;
+
+                if (gamme === 'confort') {
+                    priseEnCharge = 5;
+                    tarifApproche = 0.45;
+                    tarifTrajet = 0.98;
+                    tarifRetour = 0.45;
+                } else { // famille
+                    priseEnCharge = 10;
+                    tarifApproche = 0.60;
+                    tarifTrajet = 1.00;
+                    tarifRetour = 0.60;
+                }
+
+                const prixTotal = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+
+                // 4. Affichage des résultats
+                document.getElementById('distTrajet').innerText = distTrajet.toFixed(2);
+                document.getElementById('prixTotal').innerText = prixTotal.toFixed(2);
+                divResultat.style.display = 'block';
+
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+    </script>
+</body>
+</html>
