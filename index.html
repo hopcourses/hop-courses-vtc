@@ -110,15 +110,15 @@
 
 <script>
     // Adresse de ta base (invisible pour le client)
-    const ADRESSE_BASE = "Place de la Gare, 27100 Bailleul";
+    const ADRESSE_BASE = "198, résidence des bleuets 59299 Boeschepe";
     let mode = 'simple';
     let timeoutId = null;
     let montantFinal = 0;
 
     // --- GRILLES DE MISE A DISPOSITION ---
     const tarifsMiseADispo = {
-        'confort': { 1:80, 2:100, 3:130, 4:150, 5:200, 6:250, 7:300, 8:320, 9:350, 10:400, 11:500, 12:600 },
-        'famille': { 1:100, 2:150, 3:200, 4:250, 5:300, 6:350, 7:400, 8:500, 9:600, 10:700, 11:800, 12:1000 }
+        'confort': { 1:100, 2:200, 3:270, 4:320, 5:400, 6:450, 7:525, 8:560, 9:585, 10:650, 11:880, 12:960 },
+        'famille': { 1:200, 2:400, 3:540, 4:640, 5:800, 6:900, 7:1050, 8:1100, 9:1150, 10:1300, 11:1700, 12:1900 }
     };
 
     function setMode(m) {
