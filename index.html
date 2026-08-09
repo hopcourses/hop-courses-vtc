@@ -219,11 +219,16 @@
         'famille': { 1:180, 2:360, 3:510, 4:680, 5:850, 6:960, 7:1120, 8:1200, 9:1300, 10:1400, 11:1500, 12:1900 }
     };
 
-    // Bloquer les dates passées dès le chargement de la page
-    window.onload = function() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById("date").setAttribute('min', today);
-    };
+ // Bloquer les dates passées dès le chargement de la page (Heure locale)
+    document.addEventListener("DOMContentLoaded", function() {
+        const dateActuelle = new Date();
+        const annee = dateActuelle.getFullYear();
+        const mois = String(dateActuelle.getMonth() + 1).padStart(2, '0');
+        const jour = String(dateActuelle.getDate()).padStart(2, '0');
+        
+        const dateLocal = `${annee}-${mois}-${jour}`;
+        document.getElementById("date").setAttribute("min", dateLocal);
+    });
 
     function setMode(m) {
         mode = m;
