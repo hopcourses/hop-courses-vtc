@@ -100,49 +100,55 @@
         document.getElementById('field-duree').style.display = (m === 'mise') ? 'block' : 'none';
     }
 
-    // Système de "debounce" pour éviter d'interroger l'API à chaque lettre tapée trop vite
     function ralentirAutocompletion(inputId, listId) {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             autocompleter(inputId, listId);
-        }, 300); // Attend 300 millisecondes après la dernière frappe
+        }, 300); 
     }
 
-    // Autocomplétion fluide via Photon (Komoot) - Optimisé OSM
     async function autocompleter(inputId, listId) {
         const query = document.getElementById(inputId).value;
         if (query.length < 3) return;
 
         try {
-            // Utilisation de l'API Photon (France 'FR' et Belgique 'BE')
-            const response = await andFetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=fr`);
-            // Correction syntaxique de fetch ci-dessous
-            const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=fr`);
+            // Requête corrigée, sans l'erreur de frappe
+            const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=15&lang=fr`);
             const data = await res.json();
             
             const datalist = document.getElementById(listId);
-            datalist.innerHTML = '';
+            datalist.innerHTML = ''; // Nettoie les anciennes propositions
 
+            let count = 0;
             data.features.forEach(item => {
+                if (count >= 5) return; // On s'arrête à 5 propositions pertinentes
+
                 const props = item.properties || {};
                 
-                // Filtrer uniquement pour la France et la Belgique
+                // On garde uniquement France et Belgique
                 if (props.countrycode !== 'FR' && props.countrycode !== 'BE') return;
 
                 const numero = props.housenumber ? props.housenumber + ' ' : '';
-                const rue = props.street || '';
+                // Parfois le nom de la rue est dans la propriété "name" si "street" est vide
+                const rue = props.street || props.name || ''; 
                 const cp = props.postcode || '';
                 const ville = props.city || props.town || props.village || '';
 
+                // On s'assure d'avoir au moins la rue, le CP et la ville
                 if (rue && cp && ville) {
                     const cleanAddress = `${numero}${rue}, ${cp} ${ville}`.trim();
-                    const option = document.createElement('option');
-                    option.value = cleanAddress;
-                    datalist.appendChild(option);
+                    
+                    // On évite les doublons stricts dans la liste
+                    if (![...datalist.options].some(opt => opt.value === cleanAddress)) {
+                        const option = document.createElement('option');
+                        option.value = cleanAddress;
+                        datalist.appendChild(option);
+                        count++;
+                    }
                 }
             });
         } catch (error) {
-            console.error("Erreur d'autocomplétion", error);
+            console.error("Erreur lors de la récupération des adresses :", error);
         }
     }
 
