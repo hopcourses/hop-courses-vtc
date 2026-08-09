@@ -3,136 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Réservation VTC - Hop Courses</title>
+    <title>Réservation Hop Courses</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; background-color: #f9f9f9; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background-color: #f4f7f6; margin: 0; }
+        .app-container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        
+        /* Boutons de bascule (Onglets) */
+        .tabs { display: flex; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 10px; overflow: hidden; }
+        .tab { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; }
+        .tab.active { background: #f39c12; color: white; }
+
         .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 12px; background-color: #f39c12; color: white; border: none; cursor: pointer; width: 100%; font-size: 16px; border-radius: 4px; font-weight: bold; }
-        button:hover { background-color: #e67e22; }
-        #btn-payer { background-color: #27ae60; margin-top: 15px; display: none; }
-        #btn-payer:hover { background-color: #219653; }
-        #resultat { margin-top: 20px; padding: 15px; background-color: #e8f8f5; border: 1px solid #a3e4d7; border-radius: 5px; display: none; }
+        label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        
+        .row { display: flex; gap: 10px; }
+        .row > div { flex: 1; }
+
+        button.submit { width: 100%; padding: 15px; background: #f39c12; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; margin-top: 20px; }
+        
+        #resultat { margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 10px; display: none; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>Réserver un Transport</h2>
+<div class="app-container">
+    <h2>Où allez-vous ?</h2>
 
+    <!-- Bascule de mode -->
+    <div class="tabs">
+        <button class="tab active" id="btn-simple" onclick="setMode('simple')">Trajet Simple</button>
+        <button class="tab" id="btn-mise" onclick="setMode('mise')">Mise à dispo</button>
+    </div>
+
+    <!-- Champs communs -->
+    <div class="form-group" id="field-depart">
+        <label>Adresse de départ</label>
+        <input type="text" id="depart" placeholder="Adresse de départ">
+    </div>
+
+    <div class="form-group" id="field-arrivee">
+        <label>Adresse d'arrivée</label>
+        <input type="text" id="arrivee" placeholder="Adresse d'arrivée">
+    </div>
+
+    <div class="form-group" id="field-duree" style="display:none;">
+        <label>Durée de mise à disposition</label>
+        <select id="duree">
+            <option value="1">1 Heure</option>
+            <option value="3">3 Heures</option>
+            <option value="5">5 Heures</option>
+            <option value="8">8 Heures</option>
+        </select>
+    </div>
+
+    <div class="row">
         <div class="form-group">
-            <label>Gamme de véhicule :</label>
-            <select id="gamme">
-                <option value="confort">Confort (Max 4 passagers)</option>
-                <option value="famille">Famille (Max 6 passagers)</option>
-            </select>
+            <label>Date</label>
+            <input type="date" id="date">
         </div>
-
         <div class="form-group">
-            <label>Adresse de départ (Point de retrait) :</label>
-            <input type="text" id="depart" placeholder="Ex: 10 Rue de la Gare, Bailleul">
-        </div>
-
-        <div class="form-group">
-            <label>Adresse d'arrivée (Destination) :</label>
-            <input type="text" id="arrivee" placeholder="Ex: Grand Place, Lille">
-        </div>
-
-        <button onclick="calculerCourse()">Voir l'estimation</button>
-
-        <div id="resultat">
-            <p><strong>Distance du trajet :</strong> <span id="distTrajet">-</span> km</p>
-            <p><strong>Prix estimé :</strong> <span id="prixTotal">-</span> €</p>
-            
-            <!-- Bouton de paiement qui apparaît après le calcul -->
-            <button id="btn-payer" onclick="procederAuPaiement()">Payer la course</button>
+            <label>Heure</label>
+            <input type="time" id="heure">
         </div>
     </div>
 
-    <script>
-        const ADRESSE_BASE = "Place de la Gare, Bailleul"; 
-        let dernierPrixCalculé = 0;
+    <div class="row">
+        <div class="form-group">
+            <label>Passagers</label>
+            <input type="number" id="passagers" value="1" min="1" max="6">
+        </div>
+        <div class="form-group">
+            <label>Bagages</label>
+            <input type="number" id="bagages" value="0" min="0">
+        </div>
+    </div>
 
-        async function getCoordinates(adresse) {
-            const reponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`);
-            const data = await reponse.json();
-            if (data.length > 0) {
-                return { lat: data[0].lat, lon: data[0].lon };
-            }
-            throw new Error("Adresse introuvable : " + adresse);
+    <button class="submit" onclick="calculer()">Voir les estimations</button>
+
+    <div id="resultat">
+        <p>Prix estimé : <strong id="prixTotal">-</strong> €</p>
+    </div>
+</div>
+
+<script>
+    let mode = 'simple';
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('btn-simple').className = (m === 'simple') ? 'tab active' : 'tab';
+        document.getElementById('btn-mise').className = (m === 'mise') ? 'tab active' : 'tab';
+        
+        document.getElementById('field-arrivee').style.display = (m === 'simple') ? 'block' : 'none';
+        document.getElementById('field-duree').style.display = (m === 'mise') ? 'block' : 'none';
+    }
+
+    async function calculer() {
+        if(mode === 'simple') {
+            alert("Calcul du trajet simple avec API en cours...");
+            // Logique de ton API de calcul distance ici
+        } else {
+            alert("Calcul du forfait mise à disposition...");
+            // Logique de tes tarifs fixes ici
         }
+    }
+</script>
 
-        async function calculerCourse() {
-            const departTxt = document.getElementById('depart').value;
-            const arriveeTxt = document.getElementById('arrivee').value;
-            const gamme = document.getElementById('gamme').value;
-            const divResultat = document.getElementById('resultat');
-            const btnPayer = document.getElementById('btn-payer');
-
-            if (!departTxt || !arriveeTxt) {
-                alert("Veuillez renseigner les adresses de départ et d'arrivée.");
-                return;
-            }
-
-            try {
-                const coordsBase = await getCoordinates(ADRESSE_BASE);
-                const coordsDepart = await getCoordinates(departTxt);
-                const coordsArrivee = await getCoordinates(arriveeTxt);
-
-                const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
-                
-                const reponseRoute = await fetch(urlOSRM);
-                const dataRoute = await reponseRoute.json();
-
-                if (dataRoute.code !== 'Ok') throw new Error("Erreur lors du calcul de l'itinéraire.");
-
-                const legs = dataRoute.routes[0].legs;
-                const distApproche = legs[0].distance / 1000;
-                const distTrajet = legs[1].distance / 1000;
-                const distRetour = legs[2].distance / 1000;
-
-                let priseEnCharge = 0;
-                let tarifApproche = 0;
-                let tarifTrajet = 0;
-                let tarifRetour = 0;
-
-                if (gamme === 'confort') {
-                    priseEnCharge = 5;
-                    tarifApproche = 0.45;
-                    tarifTrajet = 0.98;
-                    tarifRetour = 0.45;
-                } else {
-                    priseEnCharge = 10;
-                    tarifApproche = 0.60;
-                    tarifTrajet = 1.00;
-                    tarifRetour = 0.60;
-                }
-
-                dernierPrixCalculé = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
-
-                document.getElementById('distTrajet').innerText = distTrajet.toFixed(2);
-                document.getElementById('prixTotal').innerText = dernierPrixCalculé.toFixed(2);
-                
-                divResultat.style.display = 'block';
-                btnPayer.style.display = 'block';
-
-            } catch (error) {
-                alert(error.message);
-            }
-        }
-
-        function procederAuPaiement() {
-            if (dernierPrixCalculé <= 0) return;
-
-            // Option : Rediriger vers un webhook Make.com ou un lien de paiement Stripe pré-configuré
-            // Exemple : envoyer les données vers un scénario Make qui génère la session Stripe avec le montant exact
-            alert("Montant à régler : " + dernierPrixCalculé.toFixed(2) + " €. Redirection vers le paiement sécurisé...");
-            
-            // TODO: Remplacer par l'URL de ton Webhook Make ou Stripe Checkout
-            // window.location.href = "https://hook.eu1.make.com/ton-lien-webhook?montant=" + dernierPrixCalculé.toFixed(2);
-        }
-    </script>
 </body>
 </html>
