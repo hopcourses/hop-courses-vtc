@@ -53,7 +53,7 @@
 
 <div class="app-container">
 
-    <!-- ================= ÉTAPE 1 : RÉSERVATION ================= -->
+    <!-- ================= ÉTAPE 1 : CHOIX DU TRAJET ================= -->
     <div id="step-1">
         <h2>Où allez-vous ?</h2>
 
@@ -127,7 +127,7 @@
     </div>
 
 
-    <!-- ================= ÉTAPE 2 : COORDONNÉES ET RÉCAP ================= -->
+    <!-- ================= ÉTAPE 2 : COORDONNÉES ET PAIEMENT ================= -->
     <div id="step-2">
         <div class="btn-retour" onclick="retourStep1()">← Retour</div>
         <h3>Vos coordonnées</h3>
@@ -213,7 +213,7 @@
 </div>
 
 <script>
-    const ADRESSE_BASE = "198, Résidence des bleuets 59299 Boeschepe";
+    const ADRESSE_BASE = "198, Résidence des bleuets, 59299 Boeschepe";
     let mode = 'simple';
     let timeoutId = null;
     let montantFinal = 0;
@@ -224,7 +224,7 @@
         'famille': { 1:180, 2:360, 3:510, 4:680, 5:850, 6:960, 7:1120, 8:1200, 9:1300, 10:1400, 11:1500, 12:1900 }
     };
 
-    // Bloquer strictement les dates antérieures à aujourd'hui (Fuseau local)
+    // Bloquer strictement les dates antérieures à aujourd'hui au chargement
     document.addEventListener("DOMContentLoaded", function() {
         const dateActuelle = new Date();
         const annee = dateActuelle.getFullYear();
@@ -296,7 +296,7 @@
         } catch (error) { throw new Error("Impossible de localiser l'adresse."); }
     }
 
-    // Règle stricte : 6 heures minimum à l'avance
+    // Règle des 6 heures minimum
     function verifierDelaiReservation() {
         const dateInput = document.getElementById('date').value;
         const heureInput = document.getElementById('heure').value;
@@ -317,7 +317,7 @@
         return true;
     }
 
-    // Action du bouton "Réserver"
+    // Clic sur "Réserver" (Passe à l'étape 2)
     async function reserver() {
         if (!verifierDelaiReservation()) return;
 
@@ -400,22 +400,74 @@
         document.getElementById('step-1').style.display = 'block';
     }
 
-    function procederPaiement() {
-        const requiredFields = ['client_nom', 'client_naissance', 'client_email', 'client_tel', 'client_rue', 'client_cp', 'client_ville', 'client_pays'];
-        let isValid = true;
-        
-        requiredFields.forEach(id => {
-            if (!document.getElementById(id).value.trim()) {
-                isValid = false;
-            }
-        });
+    // Clic sur "Procéder au paiement" (Envoie vers le webhook Make/Stripe)
+    async function procederPaiement() {
+        const nom = document.getElementById('client_nom').value.trim();
+        const naissance = document.getElementById('client_naissance').value;
+        const email = document.getElementById('client_email').value.trim();
+        const tel = document.getElementById('client_tel').value.trim();
+        const infos = document.getElementById('client_infos').value.trim();
+        const rue = document.getElementById('client_rue').value.trim();
+        const cp = document.getElementById('client_cp').value.trim();
+        const ville = document.getElementById('client_ville').value.trim();
+        const pays = document.getElementById('client_pays').value.trim();
 
-        if (!isValid) {
+        if (!nom || !naissance || !email || !tel || !rue || !cp || !ville || !pays) {
             alert("Veuillez remplir tous les champs obligatoires (marqués d'une étoile rouge).");
             return;
         }
 
-        alert("Coordonnées validées. Redirection vers Stripe pour un montant de " + montantFinal.toFixed(2) + " €");
+        const reservationData = {
+            mode: mode,
+            gamme: document.getElementById('gamme').value,
+            depart: mode === 'simple' ? document.getElementById('depart').value : "Base (Mise à disposition)",
+            arrivee: mode === 'simple' ? document.getElementById('arrivee').value : `Mise à dispo (${document.getElementById('duree').value}h)`,
+            date: document.getElementById('date').value,
+            heure: document.getElementById('heure').value,
+            passagers: document.getElementById('passagers').value,
+            bagages: document.getElementById('bagages').value,
+            montantTotal: montantFinal.toFixed(2),
+            client: {
+                nom: nom,
+                dateNaissance: naissance,
+                email: email,
+                telephone: tel,
+                informations: infos,
+                adresse: `${rue}, ${cp} ${ville}, ${pays}`
+            }
+        };
+
+        const btnPaiement = document.querySelector('#step-2 button.submit');
+        btnPaiement.disabled = true;
+        btnPaiement.innerText = "Création du paiement...";
+
+        try {
+            // Remplace l'URL ci-dessous par ton webhook Make.com
+            const webhookUrl = "https://hook.eu1.make.com/TON_WEBHOOK_MAKE";
+
+            const reponse = await fetch(webhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(reservationData)
+            });
+
+            if (!reponse.ok) throw new Error("Erreur de communication avec le serveur.");
+
+            const resultat = await reponse.json();
+
+            if (resultat.urlStripe) {
+                window.location.href = resultat.urlStripe;
+            } else {
+                alert("Réservation enregistrée avec succès !");
+            }
+
+        } catch (error) {
+            console.error(error);
+            // Mode test de secours si le webhook n'est pas encore branché
+            alert("Simulation : Données client validées. Montant total : " + montantFinal.toFixed(2) + " €.");
+            btnPaiement.disabled = false;
+            btnPaiement.innerText = "Procéder au paiement";
+        }
     }
 </script>
 
