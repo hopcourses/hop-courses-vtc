@@ -10,11 +10,11 @@
         h2 { text-align: center; color: #333; margin-top: 0; }
         
         .tabs { display: flex; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 10px; overflow: hidden; }
-        .tab { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; }
+        .tab { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; color: #555; }
         .tab.active { background: #f39c12; color: white; }
 
         .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+        label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold; }
         input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         
         .row { display: flex; gap: 10px; }
@@ -22,8 +22,11 @@
 
         button.submit { width: 100%; padding: 15px; background: #f39c12; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; margin-top: 20px; cursor: pointer; }
         button.submit:hover { background: #e67e22; }
+        button.pay { background: #27ae60; margin-top: 10px; display: none; }
+        button.pay:hover { background: #219653; }
         
         #resultat { margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 10px; display: none; text-align: center; }
+        .loader { display: none; text-align: center; margin-top: 10px; font-style: italic; color: #666; }
     </style>
 </head>
 <body>
@@ -34,6 +37,14 @@
     <div class="tabs">
         <button class="tab active" id="btn-simple" onclick="setMode('simple')">Trajet Simple</button>
         <button class="tab" id="btn-mise" onclick="setMode('mise')">Mise à dispo</button>
+    </div>
+
+    <div class="form-group">
+        <label>Gamme de véhicule</label>
+        <select id="gamme">
+            <option value="confort">Confort (Max 4 passagers)</option>
+            <option value="famille">Famille (Max 6 passagers)</option>
+        </select>
     </div>
 
     <div class="form-group" id="field-depart">
@@ -52,9 +63,17 @@
         <label>Durée de mise à disposition</label>
         <select id="duree">
             <option value="1">1 Heure</option>
+            <option value="2">2 Heures</option>
             <option value="3">3 Heures</option>
+            <option value="4">4 Heures</option>
             <option value="5">5 Heures</option>
+            <option value="6">6 Heures</option>
+            <option value="7">7 Heures</option>
             <option value="8">8 Heures</option>
+            <option value="9">9 Heures</option>
+            <option value="10">10 Heures</option>
+            <option value="11">11 Heures</option>
+            <option value="12">12 Heures</option>
         </select>
     </div>
 
@@ -81,15 +100,26 @@
     </div>
 
     <button class="submit" onclick="calculer()">Voir les estimations</button>
+    <div class="loader" id="loader">Calcul de l'itinéraire en cours...</div>
 
     <div id="resultat">
-        <p>Prix estimé : <strong id="prixTotal">-</strong> €</p>
+        <p style="margin: 0; font-size: 18px;">Prix estimé : <strong id="prixTotal" style="font-size: 24px; color: #d35400;">-</strong> €</p>
+        <button class="submit pay" id="btn-payer" onclick="payer()">Confirmer et Payer</button>
     </div>
 </div>
 
 <script>
+    // Adresse de ta base (invisible pour le client)
+    const ADRESSE_BASE = "Place de la Gare, 27100 Bailleul";
     let mode = 'simple';
     let timeoutId = null;
+    let montantFinal = 0;
+
+    // --- GRILLES DE MISE A DISPOSITION ---
+    const tarifsMiseADispo = {
+        'confort': { 1:80, 2:100, 3:130, 4:150, 5:200, 6:250, 7:300, 8:320, 9:350, 10:400, 11:500, 12:600 },
+        'famille': { 1:100, 2:150, 3:200, 4:250, 5:300, 6:350, 7:400, 8:500, 9:600, 10:700, 11:800, 12:1000 }
+    };
 
     function setMode(m) {
         mode = m;
@@ -98,47 +128,33 @@
         
         document.getElementById('field-arrivee').style.display = (m === 'simple') ? 'block' : 'none';
         document.getElementById('field-duree').style.display = (m === 'mise') ? 'block' : 'none';
+        document.getElementById('resultat').style.display = 'none';
     }
 
     function ralentirAutocompletion(inputId, listId) {
         clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            autocompleter(inputId, listId);
-        }, 300); 
+        timeoutId = setTimeout(() => autocompleter(inputId, listId), 300);
     }
 
     async function autocompleter(inputId, listId) {
         const query = document.getElementById(inputId).value;
         if (query.length < 3) return;
-
         try {
-            // Requête corrigée, sans l'erreur de frappe
             const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=15&lang=fr`);
             const data = await res.json();
-            
             const datalist = document.getElementById(listId);
-            datalist.innerHTML = ''; // Nettoie les anciennes propositions
-
+            datalist.innerHTML = '';
             let count = 0;
             data.features.forEach(item => {
-                if (count >= 5) return; // On s'arrête à 5 propositions pertinentes
-
+                if (count >= 5) return;
                 const props = item.properties || {};
-                
-                // On garde uniquement France et Belgique
                 if (props.countrycode !== 'FR' && props.countrycode !== 'BE') return;
-
                 const numero = props.housenumber ? props.housenumber + ' ' : '';
-                // Parfois le nom de la rue est dans la propriété "name" si "street" est vide
-                const rue = props.street || props.name || ''; 
+                const rue = props.street || props.name || '';
                 const cp = props.postcode || '';
                 const ville = props.city || props.town || props.village || '';
-
-                // On s'assure d'avoir au moins la rue, le CP et la ville
                 if (rue && cp && ville) {
                     const cleanAddress = `${numero}${rue}, ${cp} ${ville}`.trim();
-                    
-                    // On évite les doublons stricts dans la liste
                     if (![...datalist.options].some(opt => opt.value === cleanAddress)) {
                         const option = document.createElement('option');
                         option.value = cleanAddress;
@@ -147,17 +163,77 @@
                     }
                 }
             });
+        } catch (error) { console.error(error); }
+    }
+
+    async function getCoordinates(adresse) {
+        const reponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`);
+        const data = await reponse.json();
+        if (data.length > 0) return { lat: data[0].lat, lon: data[0].lon };
+        throw new Error("Impossible de localiser : " + adresse);
+    }
+
+    async function calculer() {
+        const gamme = document.getElementById('gamme').value;
+        const resultatDiv = document.getElementById('resultat');
+        const loader = document.getElementById('loader');
+        const btnPayer = document.getElementById('btn-payer');
+
+        resultatDiv.style.display = 'none';
+
+        if (mode === 'mise') {
+            const duree = parseInt(document.getElementById('duree').value);
+            montantFinal = tarifsMiseADispo[gamme][duree];
+            document.getElementById('prixTotal').innerText = montantFinal;
+            resultatDiv.style.display = 'block';
+            btnPayer.style.display = 'block';
+            return;
+        }
+
+        // --- Mode Trajet Simple (Calcul OSRM) ---
+        const departTxt = document.getElementById('depart').value;
+        const arriveeTxt = document.getElementById('arrivee').value;
+        if (!departTxt || !arriveeTxt) return alert("Veuillez remplir les adresses.");
+
+        loader.style.display = 'block';
+        
+        try {
+            const coordsBase = await getCoordinates(ADRESSE_BASE);
+            const coordsDepart = await getCoordinates(departTxt);
+            const coordsArrivee = await getCoordinates(arriveeTxt);
+
+            const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+            const reponseRoute = await fetch(urlOSRM);
+            const dataRoute = await reponseRoute.json();
+
+            if (dataRoute.code !== 'Ok') throw new Error("Erreur de calcul d'itinéraire.");
+
+            const legs = dataRoute.routes[0].legs;
+            const distApproche = legs[0].distance / 1000;
+            const distTrajet = legs[1].distance / 1000;
+            const distRetour = legs[2].distance / 1000;
+
+            let priseEnCharge = (gamme === 'confort') ? 5 : 10;
+            let tarifApproche = (gamme === 'confort') ? 0.45 : 0.60;
+            let tarifTrajet   = (gamme === 'confort') ? 0.98 : 1.00;
+            let tarifRetour   = (gamme === 'confort') ? 0.45 : 0.60;
+
+            montantFinal = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+
+            document.getElementById('prixTotal').innerText = montantFinal.toFixed(2);
+            loader.style.display = 'none';
+            resultatDiv.style.display = 'block';
+            btnPayer.style.display = 'block';
+
         } catch (error) {
-            console.error("Erreur lors de la récupération des adresses :", error);
+            loader.style.display = 'none';
+            alert(error.message);
         }
     }
 
-    function calculer() {
-        if(mode === 'simple') {
-            alert("Calcul du trajet simple en cours...");
-        } else {
-            alert("Calcul du forfait mise à disposition en cours...");
-        }
+    function payer() {
+        alert("Redirection vers Stripe pour un montant de " + montantFinal.toFixed(2) + " €");
+        // Prochaine étape : Insérer ici le lien Stripe ou Make !
     }
 </script>
 
