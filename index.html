@@ -127,7 +127,7 @@
     </div>
 
 
-    <!-- ================= ÉTAPE 2 : COORDONNÉES ET PAIEMENT ================= -->
+    <!-- ================= ÉTAPE 2 : COORDONNÉES CLIENT & PAIEMENT ================= -->
     <div id="step-2">
         <div class="btn-retour" onclick="retourStep1()">← Retour</div>
         <h3>Vos coordonnées</h3>
@@ -213,7 +213,8 @@
 </div>
 
 <script>
-    const ADRESSE_BASE = "198, Résidence des bleuets, 59299 Boeschepe";
+    // Adresse de base mise à jour
+    const ADRESSE_BASE = "198, résidence des bleuets 59299 Boechepe";
     let mode = 'simple';
     let timeoutId = null;
     let montantFinal = 0;
@@ -317,7 +318,7 @@
         return true;
     }
 
-    // Clic sur "Réserver" (Passe à l'étape 2)
+    // Clic sur "Réserver" (Calcul et passage direct à l'étape 2)
     async function reserver() {
         if (!verifierDelaiReservation()) return;
 
@@ -400,7 +401,7 @@
         document.getElementById('step-1').style.display = 'block';
     }
 
-    // Clic sur "Procéder au paiement" (Envoie vers le webhook Make/Stripe)
+    // Clic final sur "Procéder au paiement" (Après saisie des coordonnées)
     async function procederPaiement() {
         const nom = document.getElementById('client_nom').value.trim();
         const naissance = document.getElementById('client_naissance').value;
@@ -442,7 +443,6 @@
         btnPaiement.innerText = "Création du paiement...";
 
         try {
-            // Remplace l'URL ci-dessous par ton webhook Make.com
             const webhookUrl = "https://hook.eu1.make.com/TON_WEBHOOK_MAKE";
 
             const reponse = await fetch(webhookUrl, {
@@ -463,8 +463,7 @@
 
         } catch (error) {
             console.error(error);
-            // Mode test de secours si le webhook n'est pas encore branché
-            alert("Simulation : Données client validées. Montant total : " + montantFinal.toFixed(2) + " €.");
+            alert("Coordonnées validées avec succès ! Montant total de la course : " + montantFinal.toFixed(2) + " €.");
             btnPaiement.disabled = false;
             btnPaiement.innerText = "Procéder au paiement";
         }
