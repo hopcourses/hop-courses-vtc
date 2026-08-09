@@ -28,10 +28,12 @@
         
         .loader { display: none; text-align: center; margin-top: 10px; font-style: italic; color: #666; font-size: 14px; }
         
+        /* Étape 2 cachée par défaut */
         #step-2 { display: none; }
         .btn-retour { cursor: pointer; color: #666; font-size: 14px; margin-bottom: 15px; display: inline-block; font-weight: bold; }
         .btn-retour:hover { color: #333; }
         
+        /* Boîte récapitulative */
         .recap-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; margin-top: 25px; }
         .recap-box h4 { margin: 0 0 15px 0; color: #1a2b4c; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .recap-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #555; }
@@ -51,7 +53,7 @@
 
 <div class="app-container">
 
-    <!-- ÉTAPE 1 : CHOIX DU TRAJET -->
+    <!-- ================= ÉTAPE 1 : CHOIX DU TRAJET ================= -->
     <div id="step-1">
         <h2>Où allez-vous ?</h2>
 
@@ -120,12 +122,13 @@
             </div>
         </div>
 
+        <!-- Bouton unique "Réserver" -->
         <button class="submit" onclick="reserver()">Réserver</button>
         <div class="loader" id="loader">Vérification et calcul en cours...</div>
     </div>
 
 
-    <!-- ÉTAPE 2 : COORDONNÉES CLIENT & RÉCAP -->
+    <!-- ================= ÉTAPE 2 : COORDONNÉES CLIENT & RÉCAP ================= -->
     <div id="step-2">
         <div class="btn-retour" onclick="retourStep1()">← Retour</div>
         <h3>Vos coordonnées</h3>
@@ -214,7 +217,7 @@
     const ADRESSE_BASE = "198, résidence des bleuets 59299 Boechepe";
     let mode = 'simple';
     let timeoutId = null;
-    let montantIndicatif = 0; // Usage purement indicatif pour l'affichage front
+    let montantIndicatif = 0;
 
     const tarifsMiseADispo = {
         'confort': { 1:90, 2:180, 3:255, 4:340, 5:425, 6:480, 7:560, 8:600, 9:675, 10:700, 11:770, 12:960 },
@@ -389,7 +392,6 @@
         document.getElementById('step-1').style.display = 'block';
     }
 
-    // Bouton de paiement sécurisé (envoi des données brutes au backend)
     async function procederPaiement() {
         const nom = document.getElementById('client_nom').value.trim();
         const naissance = document.getElementById('client_naissance').value;
@@ -406,7 +408,6 @@
             return;
         }
 
-        // On transmet les adresses et paramètres bruts, JAMAIS le prix final calculé front
         const reservationData = {
             mode: mode,
             gamme: document.getElementById('gamme').value,
@@ -432,8 +433,7 @@
         btnPaiement.innerText = "Création du paiement...";
 
         try {
-            // Point d'entrée vers ton backend (Webhook Make ou Cloudflare Pages Function)
-            const webhookUrl = "https://hook.eu1.make.com/b7t2ujkx5gdfl5iz7ty3ffl64xhc19xj";
+            const webhookUrl = "https://hook.eu1.make.com/TON_WEBHOOK_MAKE";
 
             const reponse = await fetch(webhookUrl, {
                 method: "POST",
@@ -453,7 +453,6 @@
 
         } catch (error) {
             console.error(error);
-            // Erreur corrigée : message clair d'échec sans faux positif de succès
             alert("Échec de l'initialisation du paiement : " + error.message + "\nVeuillez réessayer.");
             btnPaiement.disabled = false;
             btnPaiement.innerText = "Procéder au paiement";
