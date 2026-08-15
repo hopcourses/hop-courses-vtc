@@ -1,7 +1,7 @@
 export async function onRequestPost(context) {
     try {
         const data = await context.request.json();
-        const makeWebhookUrl = "https://hook.eu1.make.com/b7t2ujkx5gdf15iz7ty3ff164xhc19xj";
+        const makeWebhookUrl = "https://hook.eu1.make.com/b7t2ujkx5gdfl5iz7ty3ffl64xhc19xj";
 
         const makeResponse = await fetch(makeWebhookUrl, {
             method: "POST",
