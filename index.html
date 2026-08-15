@@ -411,6 +411,11 @@
 
             montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
 
+            // Si c'est un aller-retour, on applique 5% de réduction
+            if (mode === 'aller-retour') {
+                montantIndicatif = montantIndicatif * 0.95;
+            }
+
             loader.style.display = 'none';
             
             let dateTimeRetourAffiche = null;
