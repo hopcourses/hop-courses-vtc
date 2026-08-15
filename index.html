@@ -433,7 +433,7 @@
         btnPaiement.innerText = "Création du paiement...";
 
         try {
-            const webhookUrl = "https://hook.eu1.make.com/b7t2ujkx5gdf15iz7ty3ff164xhc19xj";
+            const webhookUrl = "/payer";
 
             const reponse = await fetch(webhookUrl, {
                 method: "POST",
