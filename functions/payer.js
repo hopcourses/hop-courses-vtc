@@ -1,7 +1,17 @@
+export async function onRequestOptions() {
+    return new Response(null, {
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        },
+    });
+}
+
 export async function onRequestPost(context) {
     try {
         const data = await context.request.json();
-        const makeWebhookUrl = "https://hook.eu1.make.com/b7t2ujkx5gdfl5iz7ty3ffl64xhc19xj";
+        const makeWebhookUrl = "https://hook.eu1.make.com/b7t2ujkx5gdf15iz7ty3ff164xhc19xj";
 
         const makeResponse = await fetch(makeWebhookUrl, {
             method: "POST",
@@ -9,27 +19,30 @@ export async function onRequestPost(context) {
             body: JSON.stringify(data)
         });
 
-        // On lit la réponse de Make
         const texteReponse = await makeResponse.text();
         let reponseFinale;
 
         try {
-            // Si Make envoie bien le lien Stripe au format JSON
             reponseFinale = JSON.parse(texteReponse);
         } catch (e) {
-            // Si Make n'est pas encore configuré et répond "Accepted" en texte brut
             reponseFinale = { messageBrut: texteReponse };
         }
 
         return new Response(JSON.stringify(reponseFinale), {
             status: 200,
-            headers: { "Content-Type": "application/json" }
+            headers: { 
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            }
         });
 
     } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
             status: 500,
-            headers: { "Content-Type": "application/json" }
+            headers: { 
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            }
         });
     }
 }
