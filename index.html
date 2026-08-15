@@ -498,7 +498,7 @@
             mode: mode,
             montantFinal: montantIndicatif,
             gamme: document.getElementById('gamme').value,
-            adresseDepart: mode !== 'mise' ? document.getElementById('depart').value : null,
+            adresseDepart: document.getElementById('depart').value,
             adresseArrivee: mode !== 'mise' ? document.getElementById('arrivee').value : null,
             dureeMiseADispo: mode === 'mise' ? document.getElementById('duree').value : null,
             date: document.getElementById('date').value,
