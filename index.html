@@ -359,86 +359,95 @@
         const heureVal = document.getElementById('heure').value;
         const dateTimeAffiche = `${dateVal} à ${heureVal}`;
 
-        if (mode === 'mise') {
-            const duree = parseInt(document.getElementById('duree').value);
-            montantIndicatif = tarifsMiseADispo[gamme][duree];
-            
-            remplirRecap(gamme, dateTimeAffiche, null, `Mise à disposition (${duree}h)`, montantIndicatif);
-            passerEtape2();
-            return;
-        }
-
-        const departTxt = document.getElementById('depart').value;
-        const arriveeTxt = document.getElementById('arrivee').value;
-        if (!departTxt || !arriveeTxt) return alert("Indiquez-nous votre point de départ et votre destination pour continuer !");
-
         loader.style.display = 'block';
-        
+
         try {
             const coordsBase = await getCoordinates(ADRESSE_BASE);
-            const coordsDepart = await getCoordinates(departTxt);
-            const coordsArrivee = await getCoordinates(arriveeTxt);
-
             let priseEnCharge = (gamme === 'confort') ? 5 : 10;
             let tarifApproche = (gamme === 'confort') ? 0.45 : 0.60;
-            let tarifTrajet   = (gamme === 'confort') ? 0.98 : 1.00;
-            let tarifRetour   = (gamme === 'confort') ? 0.45 : 0.60;
 
             let distTrajetAffiche = 0;
             let dateTimeRetourAffiche = null;
             let texteType = "";
 
-            if (mode === 'simple') {
-                const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
-                
+            if (mode === 'mise') {
+                const departTxt = document.getElementById('depart').value;
+                if (!departTxt) {
+                    loader.style.display = 'none';
+                    return alert("Indiquez-nous votre adresse de départ pour la mise à disposition !");
+                }
+
+                const coordsDepart = await getCoordinates(departTxt);
+
+                // Appel OSRM pour l'approche (Base -> Départ)
+                const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat}?overview=false`;
                 const reponseRoute = await fetch(urlOSRM);
                 if (!reponseRoute.ok) throw new Error("Le service de calcul d'itinéraire est temporairement indisponible.");
                 const dataRoute = await reponseRoute.json();
-                if (dataRoute.code !== 'Ok') throw new Error("Impossible de calculer l'itinéraire précis pour ces adresses.");
+                if (dataRoute.code !== 'Ok') throw new Error("Impossible de calculer l'approche pour cette adresse.");
 
-                const legs = dataRoute.routes[0].legs;
-                let distApproche = legs[0].distance / 1000;
-                let distTrajet = legs[1].distance / 1000;
-                let distRetour = legs[2].distance / 1000;
+                const distApproche = dataRoute.routes[0].legs[0].distance / 1000;
+                const duree = parseInt(document.getElementById('duree').value);
+                let forfaitMise = tarifsMiseADispo[gamme][duree];
 
-                montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
-                distTrajetAffiche = distTrajet;
-                texteType = `${distTrajetAffiche.toFixed(1)} km (aller simple)`;
+                // Calcul total : Forfait horaire + Frais de prise en charge + Approche depuis la base
+                montantIndicatif = forfaitMise + priseEnCharge + (distApproche * tarifApproche);
+                texteType = `Mise à disposition (${duree}h - ${distApproche.toFixed(1)} km d'approche)`;
             } 
-            else if (mode === 'aller-retour') {
-                // 1. Calcul du trajet Aller (Base -> Départ -> Arrivée -> Base)
-                const urlOSRMAller = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
-                const repAller = await fetch(urlOSRMAller);
-                const dataAller = await repAller.json();
-                const legsAller = dataAller.routes[0].legs;
-                const distAppAller = legsAller[0].distance / 1000;
-                const distTrajAller = legsAller[1].distance / 1000;
-                const distRetAller = legsAller[2].distance / 1000;
+            else {
+                const departTxt = document.getElementById('depart').value;
+                const arriveeTxt = document.getElementById('arrivee').value;
+                if (!departTxt || !arriveeTxt) {
+                    loader.style.display = 'none';
+                    return alert("Indiquez-nous votre point de départ et votre destination pour continuer !");
+                }
 
-                let prixAller = priseEnCharge + (distAppAller * tarifApproche) + (distTrajAller * tarifTrajet) + (distRetAller * tarifRetour);
+                const coordsDepart = await getCoordinates(departTxt);
+                const coordsArrivee = await getCoordinates(arriveeTxt);
+                let tarifTrajet = (gamme === 'confort') ? 0.98 : 1.00;
+                let tarifRetour = (gamme === 'confort') ? 0.45 : 0.60;
 
-                // 2. Calcul du trajet Retour (Base -> Arrivée -> Départ -> Base)
-                const urlOSRMRetour = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
-                const repRetour = await fetch(urlOSRMRetour);
-                const dataRetour = await repRetour.json();
-                const legsRetour = dataRetour.routes[0].legs;
-                const distAppRet = legsRetour[0].distance / 1000;
-                const distTrajRet = legsRetour[1].distance / 1000;
-                const distRetRet = legsRetour[2].distance / 1000;
+                if (mode === 'simple') {
+                    const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+                    
+                    const reponseRoute = await fetch(urlOSRM);
+                    if (!reponseRoute.ok) throw new Error("Le service de calcul d'itinéraire est temporairement indisponible.");
+                    const dataRoute = await reponseRoute.json();
+                    if (dataRoute.code !== 'Ok') throw new Error("Impossible de calculer l'itinéraire précis pour ces adresses.");
 
-                let prixRetourBrut = priseEnCharge + (distAppRet * tarifApproche) + (distTrajRet * tarifTrajet) + (distRetRet * tarifRetour);
-                
-                // Application de la remise de 5% sur le retour
-                let prixRetourRemise = prixRetourBrut * 0.95;
+                    const legs = dataRoute.routes[0].legs;
+                    let distApproche = legs[0].distance / 1000;
+                    let distTrajet = legs[1].distance / 1000;
+                    let distRetour = legs[2].distance / 1000;
 
-                // Total combiné identique à Make/Stripe
-                montantIndicatif = prixAller + prixRetourRemise;
+                    montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+                    distTrajetAffiche = distTrajet;
+                    texteType = `${distTrajetAffiche.toFixed(1)} km (aller simple)`;
+                } 
+                else if (mode === 'aller-retour') {
+                    // 1. Trajet Aller
+                    const urlOSRMAller = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+                    const repAller = await fetch(urlOSRMAller);
+                    const dataAller = await repAller.json();
+                    const legsAller = dataAller.routes[0].legs;
+                    let prixAller = priseEnCharge + ((legsAller[0].distance / 1000) * tarifApproche) + ((legsAller[1].distance / 1000) * tarifTrajet) + ((legsAller[2].distance / 1000) * tarifRetour);
 
-                const dateR = document.getElementById('date-retour').value;
-                const heureR = document.getElementById('heure-retour').value;
-                dateTimeRetourAffiche = `${dateR} à ${heureR}`;
-                distTrajetAffiche = distTrajAller;
-                texteType = `Aller-retour (${distTrajAller.toFixed(1)} km l'aller)`;
+                    // 2. Trajet Retour
+                    const urlOSRMRetour = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+                    const repRetour = await fetch(urlOSRMRetour);
+                    const dataRetour = await repRetour.json();
+                    const legsRetour = dataRetour.routes[0].legs;
+                    let prixRetourBrut = priseEnCharge + ((legsRetour[0].distance / 1000) * tarifApproche) + ((legsRetour[1].distance / 1000) * tarifTrajet) + ((legsRetour[2].distance / 1000) * tarifRetour);
+                    
+                    let prixRetourRemise = prixRetourBrut * 0.95;
+                    montantIndicatif = prixAller + prixRetourRemise;
+
+                    const dateR = document.getElementById('date-retour').value;
+                    const heureR = document.getElementById('heure-retour').value;
+                    dateTimeRetourAffiche = `${dateR} à ${heureR}`;
+                    distTrajetAffiche = legsAller[1].distance / 1000;
+                    texteType = `Aller-retour (${distTrajetAffiche.toFixed(1)} km l'aller)`;
+                }
             }
 
             loader.style.display = 'none';
