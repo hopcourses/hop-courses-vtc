@@ -7,11 +7,11 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background-color: #f4f7f6; margin: 0; }
         .app-container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; margin-top: 0; }
+        h2 { text-align: center; color: #1a2b4c; margin-top: 0; font-size: 22px; }
         h3 { color: #1a2b4c; margin-bottom: 15px; }
         
         .tabs { display: flex; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 10px; overflow: hidden; }
-        .tab { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; color: #555; }
+        .tab { flex: 1; padding: 10px; border: none; background: #eee; cursor: pointer; font-weight: bold; font-size: 13px; color: #555; transition: 0.2s; text-align: center; }
         .tab.active { background: #f39c12; color: white; }
 
         .form-group { margin-bottom: 15px; }
@@ -23,7 +23,10 @@
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
 
-        button.submit { width: 100%; padding: 15px; background: #f39c12; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; margin-top: 20px; cursor: pointer; transition: 0.3s; }
+        .box-section { background: #fdfefe; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 15px; }
+        .box-title { font-size: 12px; font-weight: bold; color: #f39c12; margin-bottom: 8px; text-transform: uppercase; }
+
+        button.submit { width: 100%; padding: 15px; background: #f39c12; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3); }
         button.submit:hover { background: #e67e22; }
         
         .loader { display: none; text-align: center; margin-top: 10px; font-style: italic; color: #666; font-size: 14px; }
@@ -44,7 +47,7 @@
         .promo-box button { background: #000; color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold; cursor: pointer; }
         
         .total-box { text-align: right; margin-top: 20px; }
-        .total-box .titre { font-size: 16px; font-weight: bold; color: #333; }
+        .total-box .titre { font-size: 14px; font-weight: bold; color: #555; }
         .total-box .prix { font-size: 24px; font-weight: bold; color: #1a2b4c; }
         .total-box .tva { font-size: 11px; color: #888; }
     </style>
@@ -53,37 +56,38 @@
 
 <div class="app-container">
 
-    <!-- ================= ÉTAPE 1 : CHOIX DU TRAJET ================= -->
+    <!-- ================= ÉTAPE 1 : ESTIMATION ================= -->
     <div id="step-1">
-        <h2>Où allez-vous ?</h2>
+        <h2>Où est-ce qu'on vous emmène ? 🚖</h2>
 
         <div class="tabs">
-            <button class="tab active" id="btn-simple" onclick="setMode('simple')">Trajet Simple</button>
-            <button class="tab" id="btn-mise" onclick="setMode('mise')">Mise à dispo</button>
+            <button class="tab active" id="btn-simple" onclick="setMode('simple')">📍 Trajet simple</button>
+            <button class="tab" id="btn-aller-retour" onclick="setMode('aller-retour')">🔄 Aller-retour</button>
+            <button class="tab" id="btn-mise" onclick="setMode('mise')">⏱️ Mise à dispo</button>
         </div>
 
         <div class="form-group">
-            <label>Gamme de véhicule</label>
+            <label>Choisissez votre gamme de véhicule</label>
             <select id="gamme">
-                <option value="confort">Confort (Max 4 passagers)</option>
-                <option value="famille">Famille (Max 6 passagers)</option>
+                <option value="confort">✨ Confort (Berline spacieuse - Max 4 passagers)</option>
+                <option value="famille">🚐 Famille & Van (Grand confort - Max 6 passagers)</option>
             </select>
         </div>
 
         <div class="form-group" id="field-depart">
-            <label>Adresse de départ</label>
-            <input type="text" id="depart" placeholder="Tapez une adresse..." list="depart-suggestions" oninput="ralentirAutocompletion('depart', 'depart-suggestions')">
+            <label>📍 Adresse de départ</label>
+            <input type="text" id="depart" placeholder="Ex: 12 rue de la Gare, Lille..." list="depart-suggestions" oninput="ralentirAutocompletion('depart', 'depart-suggestions')">
             <datalist id="depart-suggestions"></datalist>
         </div>
 
         <div class="form-group" id="field-arrivee">
-            <label>Adresse d'arrivée</label>
-            <input type="text" id="arrivee" placeholder="Tapez une adresse..." list="arrivee-suggestions" oninput="ralentirAutocompletion('arrivee', 'arrivee-suggestions')">
+            <label>🏁 Destination</label>
+            <input type="text" id="arrivee" placeholder="Ex: Aéroport de Lesquin..." list="arrivee-suggestions" oninput="ralentirAutocompletion('arrivee', 'arrivee-suggestions')">
             <datalist id="arrivee-suggestions"></datalist>
         </div>
 
         <div class="form-group" id="field-duree" style="display:none;">
-            <label>Durée de mise à disposition</label>
+            <label>Durée de mise à disposition avec chauffeur</label>
             <select id="duree">
                 <option value="1">1 Heure</option>
                 <option value="2">2 Heures</option>
@@ -100,38 +104,57 @@
             </select>
         </div>
 
-        <div class="row">
-            <div class="form-group">
-                <label>Date</label>
-                <input type="date" id="date">
+        <!-- Bloc Aller -->
+        <div class="box-section">
+            <div class="box-title" id="label-bloc-aller">📅 Date & Heure du trajet</div>
+            <div class="row">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Date</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Heure</label>
+                    <input type="time" id="heure">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Heure</label>
-                <input type="time" id="heure">
+        </div>
+
+        <!-- Bloc Retour (Affiché uniquement en mode Aller-Retour) -->
+        <div class="box-section" id="bloc-retour" style="display:none;">
+            <div class="box-title">🔄 Date & Heure du retour</div>
+            <div class="row">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Date de retour</label>
+                    <input type="date" id="date-retour">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Heure de retour</label>
+                    <input type="time" id="heure-retour">
+                </div>
             </div>
         </div>
 
         <div class="row">
             <div class="form-group">
-                <label>Passagers</label>
+                <label>👥 Passagers</label>
                 <input type="number" id="passagers" value="1" min="1" max="6">
             </div>
             <div class="form-group">
-                <label>Bagages</label>
+                <label>🧳 Bagages</label>
                 <input type="number" id="bagages" value="0" min="0">
             </div>
         </div>
 
-        <!-- Bouton unique "Réserver" -->
-        <button class="submit" onclick="reserver()">Réserver</button>
-        <div class="loader" id="loader">Vérification et calcul en cours...</div>
+        <!-- Bouton adapté pour l'estimation -->
+        <button class="submit" onclick="reserver()">Obtenir mon estimation 🚀</button>
+        <div class="loader" id="loader">Un instant, on calcule le meilleur itinéraire pour vous... ⏳</div>
     </div>
 
 
-    <!-- ================= ÉTAPE 2 : COORDONNÉES CLIENT & RÉCAP ================= -->
+    <!-- ================= ÉTAPE 2 : COORDONNÉES & PAIEMENT ================= -->
     <div id="step-2">
-        <div class="btn-retour" onclick="retourStep1()">← Retour</div>
-        <h3>Vos coordonnées</h3>
+        <div class="btn-retour" onclick="retourStep1()">← Modifier mon trajet</div>
+        <h3>Presque fini ! Dites-nous en un peu plus sur vous ✍️</h3>
 
         <div class="form-group">
             <label>Nom et Prénom <span>*</span></label>
@@ -150,28 +173,28 @@
         </div>
 
         <div class="form-group">
-            <label>Email <span>*</span></label>
+            <label>Email (pour recevoir votre confirmation) <span>*</span></label>
             <input type="email" id="client_email" placeholder="jean.dupont@email.com">
         </div>
 
         <div class="form-group">
-            <label>Informations Complémentaires</label>
-            <textarea id="client_infos" placeholder="Numéro de vol, code train, siège bébé..."></textarea>
+            <label>Informations pour le chauffeur (Optionnel)</label>
+            <textarea id="client_infos" placeholder="Numéro de vol, nom sur la pancarte, besoin d'un siège bébé..."></textarea>
         </div>
 
         <div class="form-group">
-            <label>N° et Rue <span>*</span></label>
-            <input type="text" id="client_rue" placeholder="ex: 123 Avenue des Champs-Élysées">
+            <label>N° et Rue (Facturation) <span>*</span></label>
+            <input type="text" id="client_rue" placeholder="ex: 123 Avenue de la République">
         </div>
 
         <div class="row">
             <div class="form-group">
                 <label>Code Postal <span>*</span></label>
-                <input type="text" id="client_cp" placeholder="75008">
+                <input type="text" id="client_cp" placeholder="59000">
             </div>
             <div class="form-group">
                 <label>Ville <span>*</span></label>
-                <input type="text" id="client_ville" placeholder="Paris">
+                <input type="text" id="client_ville" placeholder="Lille">
             </div>
         </div>
 
@@ -182,7 +205,7 @@
 
         <!-- Boîte de Récapitulatif -->
         <div class="recap-box">
-            <h4>Récapitulatif</h4>
+            <h4>📋 Récapitulatif de votre course</h4>
             <div class="recap-line">
                 <span>Véhicule</span>
                 <strong id="recap-vehicule">-</strong>
@@ -191,9 +214,13 @@
                 <span>Date & Heure</span>
                 <strong id="recap-datetime">-</strong>
             </div>
+            <div class="recap-line" id="line-recap-retour" style="display:none;">
+                <span>Retour</span>
+                <strong id="recap-datetime-retour">-</strong>
+            </div>
             <div class="recap-line">
-                <span>Trajet</span>
-                <strong id="recap-trajet">-</strong>
+                <span>Type de trajet</span>
+                <strong id="recap-type">-</strong>
             </div>
 
             <div class="promo-box">
@@ -202,13 +229,13 @@
             </div>
 
             <div class="total-box">
-                <div class="titre">Total estimé</div>
+                <div class="titre">Total à régler</div>
                 <div class="prix"><span id="recap-prix">0.00</span> €</div>
-                <div class="tva">Dont TVA (0%): 0.00 €</div>
+                <div class="tva">Prix net / TVA non applicable</div>
             </div>
         </div>
 
-        <button class="submit" onclick="procederPaiement()">Procéder au paiement</button>
+        <button class="submit" onclick="procederPaiement()">🔒 Valider et payer en toute sécurité</button>
     </div>
 
 </div>
@@ -232,16 +259,23 @@
         
         const dateLocal = `${annee}-${mois}-${jour}`;
         const inputDate = document.getElementById("date");
+        const inputDateRetour = document.getElementById("date-retour");
         inputDate.setAttribute("min", dateLocal);
         inputDate.value = dateLocal;
+        inputDateRetour.setAttribute("min", dateLocal);
+        inputDateRetour.value = dateLocal;
     });
 
     function setMode(m) {
         mode = m;
         document.getElementById('btn-simple').className = (m === 'simple') ? 'tab active' : 'tab';
+        document.getElementById('btn-aller-retour').className = (m === 'aller-retour') ? 'tab active' : 'tab';
         document.getElementById('btn-mise').className = (m === 'mise') ? 'tab active' : 'tab';
-        document.getElementById('field-arrivee').style.display = (m === 'simple') ? 'block' : 'none';
+        
+        document.getElementById('field-arrivee').style.display = (m === 'mise') ? 'none' : 'block';
         document.getElementById('field-duree').style.display = (m === 'mise') ? 'block' : 'none';
+        document.getElementById('bloc-retour').style.display = (m === 'aller-retour') ? 'block' : 'none';
+        document.getElementById('label-bloc-aller').innerText = (m === 'aller-retour') ? '📅 Date & Heure de l\'aller' : '📅 Date & Heure du trajet';
     }
 
     function ralentirAutocompletion(inputId, listId) {
@@ -300,7 +334,7 @@
         const heureInput = document.getElementById('heure').value;
 
         if (!dateInput || !heureInput) {
-            alert("Veuillez sélectionner une date et une heure.");
+            alert("Oups ! N'oubliez pas de sélectionner une date et une heure.");
             return false;
         }
 
@@ -309,7 +343,7 @@
         const dateMinAutorisee = new Date(dateActuelle.getTime() + (6 * 60 * 60 * 1000));
 
         if (dateChoisie < dateMinAutorisee) {
-            alert("Les réservations doivent être effectuées au moins 6 heures à l'avance.");
+            alert("Pour un service sur-mesure de qualité, nos réservations se font au moins 6 heures à l'avance.");
             return false;
         }
         return true;
@@ -329,14 +363,14 @@
             const duree = parseInt(document.getElementById('duree').value);
             montantIndicatif = tarifsMiseADispo[gamme][duree];
             
-            remplirRecap(gamme, dateTimeAffiche, `Mise à disposition (${duree}h)`, montantIndicatif);
+            remplirRecap(gamme, dateTimeAffiche, null, `Mise à disposition (${duree}h)`, montantIndicatif);
             passerEtape2();
             return;
         }
 
         const departTxt = document.getElementById('depart').value;
         const arriveeTxt = document.getElementById('arrivee').value;
-        if (!departTxt || !arriveeTxt) return alert("Veuillez remplir les adresses de départ et d'arrivée.");
+        if (!departTxt || !arriveeTxt) return alert("Indiquez-nous votre point de départ et votre destination pour continuer !");
 
         loader.style.display = 'block';
         
@@ -345,17 +379,30 @@
             const coordsDepart = await getCoordinates(departTxt);
             const coordsArrivee = await getCoordinates(arriveeTxt);
 
-            const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+            let urlOSRM = "";
+            if (mode === 'simple') {
+                urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+            } else if (mode === 'aller-retour') {
+                urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
+            }
             
             const reponseRoute = await fetch(urlOSRM);
-            if (!reponseRoute.ok) throw new Error("Le serveur de calcul de distance est indisponible.");
+            if (!reponseRoute.ok) throw new Error("Le service de calcul d'itinéraire est temporairement indisponible.");
             const dataRoute = await reponseRoute.json();
-            if (dataRoute.code !== 'Ok') throw new Error("Impossible de calculer l'itinéraire.");
+            if (dataRoute.code !== 'Ok') throw new Error("Impossible de calculer l'itinéraire précis pour ces adresses.");
 
             const legs = dataRoute.routes[0].legs;
-            const distApproche = legs[0].distance / 1000;
-            const distTrajet = legs[1].distance / 1000;
-            const distRetour = legs[2].distance / 1000;
+            let distApproche = legs[0].distance / 1000;
+            let distTrajet = legs[1].distance / 1000;
+            let distRetour = 0;
+
+            if (mode === 'simple') {
+                distRetour = legs[2].distance / 1000;
+            } else if (mode === 'aller-retour') {
+                // Pour un aller-retour, on prend l'aller (leg 1) + le retour (leg 2) et le retour final base (leg 3)
+                distTrajet = distTrajet + (legs[2].distance / 1000);
+                distRetour = legs[3].distance / 1000;
+            }
 
             let priseEnCharge = (gamme === 'confort') ? 5 : 10;
             let tarifApproche = (gamme === 'confort') ? 0.45 : 0.60;
@@ -365,7 +412,17 @@
             montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
 
             loader.style.display = 'none';
-            remplirRecap(gamme, dateTimeAffiche, `${distTrajet.toFixed(1)} km`, montantIndicatif);
+            
+            let dateTimeRetourAffiche = null;
+            let texteType = `${(distTrajet/2).toFixed(1)} km (aller simple)`;
+            if (mode === 'aller-retour') {
+                const dateR = document.getElementById('date-retour').value;
+                const heureR = document.getElementById('heure-retour').value;
+                dateTimeRetourAffiche = `${dateR} à ${heureR}`;
+                texteType = `Aller-retour (${(distTrajet).toFixed(1)} km au total)`;
+            }
+
+            remplirRecap(gamme, dateTimeAffiche, dateTimeRetourAffiche, texteType, montantIndicatif);
             passerEtape2();
 
         } catch (error) {
@@ -374,11 +431,20 @@
         }
     }
 
-    function remplirRecap(gamme, date, trajet, prix) {
+    function remplirRecap(gamme, dateAller, dateRetour, typeTrajet, prix) {
         const gammeMaj = gamme.charAt(0).toUpperCase() + gamme.slice(1); 
         document.getElementById('recap-vehicule').innerText = gammeMaj;
-        document.getElementById('recap-datetime').innerText = date;
-        document.getElementById('recap-trajet').innerText = trajet;
+        document.getElementById('recap-datetime').innerText = dateAller;
+        document.getElementById('recap-type').innerText = typeTrajet;
+        
+        const lineRetour = document.getElementById('line-recap-retour');
+        if (dateRetour) {
+            document.getElementById('recap-datetime-retour').innerText = dateRetour;
+            lineRetour.style.display = 'flex';
+        } else {
+            lineRetour.style.display = 'none';
+        }
+
         document.getElementById('recap-prix').innerText = prix.toFixed(2);
     }
 
@@ -404,18 +470,20 @@
         const pays = document.getElementById('client_pays').value.trim();
 
         if (!nom || !naissance || !email || !tel || !rue || !cp || !ville || !pays) {
-            alert("Veuillez remplir tous les champs obligatoires (marqués d'une étoile rouge).");
+            alert("Oups ! Merci de remplir tous les champs obligatoires marqués d'une astérisque rouge.");
             return;
         }
 
         const reservationData = {
             mode: mode,
             gamme: document.getElementById('gamme').value,
-            adresseDepart: mode === 'simple' ? document.getElementById('depart').value : null,
-            adresseArrivee: mode === 'simple' ? document.getElementById('arrivee').value : null,
+            adresseDepart: mode !== 'mise' ? document.getElementById('depart').value : null,
+            adresseArrivee: mode !== 'mise' ? document.getElementById('arrivee').value : null,
             dureeMiseADispo: mode === 'mise' ? document.getElementById('duree').value : null,
             date: document.getElementById('date').value,
             heure: document.getElementById('heure').value,
+            dateRetour: mode === 'aller-retour' ? document.getElementById('date-retour').value : null,
+            heureRetour: mode === 'aller-retour' ? document.getElementById('heure-retour').value : null,
             passagers: document.getElementById('passagers').value,
             bagages: document.getElementById('bagages').value,
             client: {
@@ -430,7 +498,7 @@
 
         const btnPaiement = document.querySelector('#step-2 button.submit');
         btnPaiement.disabled = true;
-        btnPaiement.innerText = "Création du paiement...";
+        btnPaiement.innerText = "Préparation de votre session sécurisée...";
 
         try {
             const webhookUrl = "https://hop-courses-vtc.pages.dev/payer";
@@ -441,22 +509,22 @@
                 body: JSON.stringify(reservationData)
             });
 
-            if (!reponse.ok) throw new Error("Le service de paiement est momentanément injoignable.");
+            if (!reponse.ok) throw new Error("Le service de paiement est momentanément indisponible.");
 
             const resultat = await reponse.json();
 
             if (resultat.urlStripe) {
                 window.top.location.href = resultat.urlStripe;
             } else {
-                alert("🛑 DEBUG - Voici ce que Make a vraiment répondu :\n" + JSON.stringify(resultat, null, 2));
-                throw new Error("Le format renvoyé par Make n'est pas bon.");
+                alert("🛑 DEBUG - Réponse inattendue :\n" + JSON.stringify(resultat, null, 2));
+                throw new Error("Le format renvoyé par Make n'est pas correct.");
             }
 
         } catch (error) {
             console.error(error);
-            alert("Échec de l'initialisation du paiement : " + error.message + "\nVeuillez réessayer.");
+            alert("Oups : " + error.message + "\nVeuillez réessayer dans un instant.");
             btnPaiement.disabled = false;
-            btnPaiement.innerText = "Procéder au paiement";
+            btnPaiement.innerText = "🔒 Valider et payer en toute sécurité";
         }
     }
 </script>
