@@ -448,7 +448,8 @@
             if (resultat.urlStripe) {
                 window.location.href = resultat.urlStripe;
             } else {
-                throw new Error("Réponse invalide du serveur de paiement.");
+                alert("🛑 DEBUG - Voici ce que Make a vraiment répondu :\n" + JSON.stringify(resultat, null, 2));
+                throw new Error("Le format renvoyé par Make n'est pas bon.");
             }
 
         } catch (error) {
