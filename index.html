@@ -490,26 +490,27 @@
         }
 
         const reservationData = {
-            mode: mode,
-            gamme: document.getElementById('gamme').value,
-            adresseDepart: mode !== 'mise' ? document.getElementById('depart').value : null,
-            adresseArrivee: mode !== 'mise' ? document.getElementById('arrivee').value : null,
-            dureeMiseADispo: mode === 'mise' ? document.getElementById('duree').value : null,
-            date: document.getElementById('date').value,
-            heure: document.getElementById('heure').value,
-            dateRetour: mode === 'aller-retour' ? document.getElementById('date-retour').value : null,
-            heureRetour: mode === 'aller-retour' ? document.getElementById('heure-retour').value : null,
-            passagers: document.getElementById('passagers').value,
-            bagages: document.getElementById('bagages').value,
-            client: {
-                nom,
-                dateNaissance: naissance,
-                email,
-                telephone: tel,
-                informations: infos,
-                adresse: `${rue}, ${cp} ${ville}, ${pays}`
-            }
-        };
+    mode: mode,
+    montantFinal: montantIndicatif,
+    gamme: document.getElementById('gamme').value,
+    adresseDepart: mode !== 'mise' ? document.getElementById('depart').value : null,
+    adresseArrivee: mode !== 'mise' ? document.getElementById('arrivee').value : null,
+    dureeMiseADispo: mode === 'mise' ? document.getElementById('duree').value : null,
+    date: document.getElementById('date').value,
+    heure: document.getElementById('heure').value,
+    dateRetour: mode === 'aller-retour' ? document.getElementById('date-retour').value : null,
+    heureRetour: mode === 'aller-retour' ? document.getElementById('heure-retour').value : null,
+    passagers: document.getElementById('passagers').value,
+    bagages: document.getElementById('bagages').value,
+    client: {
+        nom,
+        dateNaissance: naissance,
+        email,
+        telephone: tel,
+        informations: infos,
+        adresse: `${rue}, ${cp} ${ville}, ${pays}`
+    }
+};
 
         const btnPaiement = document.querySelector('#step-2 button.submit');
         btnPaiement.disabled = true;
