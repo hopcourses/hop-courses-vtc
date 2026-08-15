@@ -409,10 +409,20 @@
             let tarifTrajet   = (gamme === 'confort') ? 0.98 : 1.00;
             let tarifRetour   = (gamme === 'confort') ? 0.45 : 0.60;
 
-            montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+            if (mode === 'simple' || mode === 'mise') {
+                montantIndicatif = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+            } 
+            else if (mode === 'aller-retour') {
+                // Calcul de l'aller (Base -> Départ -> Arrivée -> Base)
+                let prixAller = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+                
+                // Calcul du retour (Base -> Arrivée -> Départ -> Base) - En inversant le trajet
+                let prixRetour = priseEnCharge + (distApproche * tarifApproche) + (distTrajet * tarifTrajet) + (distRetour * tarifRetour);
+                
+                // Total des deux courses
+                montantIndicatif = prixAller + prixRetour;
 
-            // Si c'est un aller-retour, on applique 5% de réduction
-            if (mode === 'aller-retour') {
+                // Application éventuelle de ta remise de 5% sur l'aller-retour
                 montantIndicatif = montantIndicatif * 0.95;
             }
 
