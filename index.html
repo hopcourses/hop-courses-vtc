@@ -145,9 +145,16 @@
             </div>
         </div>
 
-        <!-- Bouton adapté pour l'estimation -->
-        <button class="submit" onclick="reserver()">Obtenir mon estimation 🚀</button>
+        <!-- Bouton d'estimation -->
+        <button class="submit" onclick="calculerEstimation()">Obtenir mon estimation 🚀</button>
         <div class="loader" id="loader">Un instant, on calcule le meilleur itinéraire pour vous... ⏳</div>
+
+        <!-- Bloc Résultat Estimation affiché sur l'Étape 1 -->
+        <div id="resultat-estimation" style="display:none; background:#e8f4fd; border:2px solid #3498db; border-radius:12px; padding:20px; text-align:center; margin-top:20px;">
+            <div style="font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Tarif estimé pour votre course</div>
+            <div style="font-size: 28px; font-weight: bold; color: #1a2b4c; margin-bottom: 15px;"><span id="montant-estime">0.00</span> €</div>
+            <button class="submit" style="background: #27ae60; margin-top:0; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);" onclick="passerEtape2()">Réserver ce trajet ➔</button>
+        </div>
     </div>
 
 
@@ -276,6 +283,9 @@
         document.getElementById('field-duree').style.display = (m === 'mise') ? 'block' : 'none';
         document.getElementById('bloc-retour').style.display = (m === 'aller-retour') ? 'block' : 'none';
         document.getElementById('label-bloc-aller').innerText = (m === 'aller-retour') ? '📅 Date & Heure de l\'aller' : '📅 Date & Heure du trajet';
+        
+        // Masquer le bloc résultat si on change de mode
+        document.getElementById('resultat-estimation').style.display = 'none';
     }
 
     function ralentirAutocompletion(inputId, listId) {
@@ -349,7 +359,7 @@
         return true;
     }
 
-    async function reserver() {
+    async function calculerEstimation() {
         if (!verifierDelaiReservation()) return;
 
         const gamme = document.getElementById('gamme').value;
@@ -360,6 +370,7 @@
         const dateTimeAffiche = `${dateVal} à ${heureVal}`;
 
         loader.style.display = 'block';
+        document.getElementById('resultat-estimation').style.display = 'none';
 
         try {
             const coordsBase = await getCoordinates(ADRESSE_BASE);
@@ -379,7 +390,6 @@
 
                 const coordsDepart = await getCoordinates(departTxt);
 
-                // Appel OSRM pour l'approche (Base -> Départ)
                 const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat}?overview=false`;
                 const reponseRoute = await fetch(urlOSRM);
                 if (!reponseRoute.ok) throw new Error("Le service de calcul d'itinéraire est temporairement indisponible.");
@@ -390,7 +400,6 @@
                 const duree = parseInt(document.getElementById('duree').value);
                 let forfaitMise = tarifsMiseADispo[gamme][duree];
 
-                // Calcul total : Forfait horaire + Frais de prise en charge + Approche depuis la base
                 montantIndicatif = forfaitMise + priseEnCharge + (distApproche * tarifApproche);
                 texteType = `Mise à disposition (${duree}h - ${distApproche.toFixed(1)} km d'approche)`;
             } 
@@ -425,14 +434,12 @@
                     texteType = `${distTrajetAffiche.toFixed(1)} km (aller simple)`;
                 } 
                 else if (mode === 'aller-retour') {
-                    // 1. Trajet Aller
                     const urlOSRMAller = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
                     const repAller = await fetch(urlOSRMAller);
                     const dataAller = await repAller.json();
                     const legsAller = dataAller.routes[0].legs;
                     let prixAller = priseEnCharge + ((legsAller[0].distance / 1000) * tarifApproche) + ((legsAller[1].distance / 1000) * tarifTrajet) + ((legsAller[2].distance / 1000) * tarifRetour);
 
-                    // 2. Trajet Retour
                     const urlOSRMRetour = `https://router.project-osrm.org/route/v1/driving/${coordsBase.lon},${coordsBase.lat};${coordsArrivee.lon},${coordsArrivee.lat};${coordsDepart.lon},${coordsDepart.lat};${coordsBase.lon},${coordsBase.lat}?overview=false`;
                     const repRetour = await fetch(urlOSRMRetour);
                     const dataRetour = await repRetour.json();
@@ -452,7 +459,10 @@
 
             loader.style.display = 'none';
             remplirRecap(gamme, dateTimeAffiche, dateTimeRetourAffiche, texteType, montantIndicatif);
-            passerEtape2();
+            
+            // Affichage du montant estimé sur l'Étape 1
+            document.getElementById('montant-estime').innerText = montantIndicatif.toFixed(2);
+            document.getElementById('resultat-estimation').style.display = 'block';
 
         } catch (error) {
             loader.style.display = 'none';
